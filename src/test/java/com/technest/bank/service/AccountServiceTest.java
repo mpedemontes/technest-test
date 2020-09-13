@@ -5,13 +5,16 @@ import com.technest.bank.dto.AccountDto;
 import com.technest.bank.dto.AccountPostDto;
 import com.technest.bank.exception.AccountNotFoundException;
 import com.technest.bank.exception.NegativeBalanceException;
+import com.technest.bank.exception.TreasuryModifiedException;
 import com.technest.bank.model.Account;
 import com.technest.bank.service.impl.AccountServiceImpl;
 import com.technest.bank.service.impl.MapperImpl;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.money.Monetary;
+import javax.money.UnknownCurrencyException;
 import org.javamoney.moneta.Money;
 import org.junit.Assert;
 import org.junit.Test;
@@ -92,7 +95,7 @@ public class AccountServiceTest {
         Money.of(50, "EUR"), false);
 
     // When
-    Mockito.when(accountRepository.findById(id)).thenReturn(java.util.Optional.of(account));
+    Mockito.when(accountRepository.findById(id)).thenReturn(Optional.of(account));
 
     // Then
     ResponseEntity<AccountDto> result = accountService.findById(id);
@@ -179,7 +182,7 @@ public class AccountServiceTest {
   @Test
   public void addNonTreasuryAccountWithNonNegativeBalanceTest() throws NegativeBalanceException {
     // Given
-    AccountPostDto accountPostDto = new AccountPostDto("ACcount", "EUR", BigDecimal.valueOf(50),
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(50),
         false);
     Account account = new Account(1, "Account", Money.of(50, "EUR"), false);
     AccountDto accountDto = new AccountDto(1, "Account", Monetary.getCurrency("EUR"),
@@ -193,4 +196,159 @@ public class AccountServiceTest {
     Assert.assertNotNull(result);
     Assert.assertEquals(result, ResponseEntity.ok().body(accountDto));
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountWithNullIdTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = null;
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(50),
+        false);
+
+    // When
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountWithNullNameTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto(null, "EUR", BigDecimal.valueOf(50), false);
+
+    // When
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountWithNullCurrencyTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("Account", null, BigDecimal.valueOf(50),
+        false);
+
+    // When
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountWithNullBalanceTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", null, false);
+
+    // When
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountWithNullTreasuryTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(50),
+        null);
+
+    // When
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = AccountNotFoundException.class)
+  public void updateNonExistingAccountTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(50),
+        false);
+
+    // When
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = TreasuryModifiedException.class)
+  public void updateAccountModifyingTreasuryTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    Account account = new Account(id, "Account", Money.of(50, "EUR"), false);
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(50),
+        true);
+
+    // When
+    Mockito.when(accountRepository.findById(Mockito.any())).thenReturn(
+        Optional.of(account));
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = NegativeBalanceException.class)
+  public void updateNonTreasuryAccountToNegativeBalanceTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("Account1", "EUR", BigDecimal.valueOf(-50),
+        false);
+    Account account = new Account(id, "Account1", Money.of(50, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(id)).thenReturn(Optional.of(account));
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test(expected = UnknownCurrencyException.class)
+  public void updateAccountWithInvalidCurrencyTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("Account1", "ABC", BigDecimal.valueOf(50),
+        false);
+    Account account = new Account(id, "Account1", Money.of(50, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(Mockito.any())).thenReturn(
+        Optional.of(account));
+
+    // Then
+    accountService.updateAccount(id, accountPostDto);
+  }
+
+  @Test
+  public void updateAccountWithValidDataTest()
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
+    // Given
+    final Integer id = 1;
+    AccountPostDto accountPostDto = new AccountPostDto("New Name", "EUR", BigDecimal.valueOf(50),
+        false);
+    Account oldAccount = new Account(id, "Old Name", Money.of(50, "EUR"), false);
+    Account newAccount = new Account(id, "New Name", Money.of(50, "EUR"), false);
+    AccountDto newAccountDto = new AccountDto(id, "New Name", Monetary.getCurrency("EUR"),
+        Money.of(50, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(id)).thenReturn(
+        Optional.of(oldAccount));
+    Mockito.when(accountRepository.save(newAccount)).thenReturn(newAccount);
+
+    // Then
+    ResponseEntity<AccountDto> result = accountService.updateAccount(id, accountPostDto);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(result, ResponseEntity.ok().body(newAccountDto));
+  }
+
 }
