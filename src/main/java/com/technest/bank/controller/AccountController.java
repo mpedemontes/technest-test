@@ -2,6 +2,9 @@ package com.technest.bank.controller;
 
 import com.technest.bank.dto.AccountDto;
 import com.technest.bank.dto.AccountPostDto;
+import com.technest.bank.exception.AccountNotFoundException;
+import com.technest.bank.exception.NegativeBalanceException;
+import com.technest.bank.exception.TreasuryModifiedException;
 import com.technest.bank.service.AccountService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,26 +35,29 @@ public class AccountController {
 
   @GetMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
-  public ResponseEntity<AccountDto> findById(@PathVariable("id") Integer id) {
+  public ResponseEntity<AccountDto> findById(@PathVariable("id") Integer id)
+      throws AccountNotFoundException {
     return accountService.findById(id);
   }
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public ResponseEntity<AccountDto> addAccount(@RequestBody AccountPostDto accountPostDto) {
+  public ResponseEntity<AccountDto> addAccount(@RequestBody AccountPostDto accountPostDto)
+      throws NegativeBalanceException {
     return accountService.addAccount(accountPostDto);
   }
 
   @PutMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
   public ResponseEntity<AccountDto> updateAccount(@PathVariable("id") Integer id,
-      @RequestBody AccountPostDto accountPostDto) {
+      @RequestBody AccountPostDto accountPostDto)
+      throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException {
     return accountService.updateAccount(id, accountPostDto);
   }
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
-  public void deleteAccount(@PathVariable("id") Integer id) {
+  public void deleteAccount(@PathVariable("id") Integer id) throws AccountNotFoundException {
     accountService.deleteAccount(id);
   }
 }
