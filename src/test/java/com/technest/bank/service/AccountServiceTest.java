@@ -351,4 +351,38 @@ public class AccountServiceTest {
     Assert.assertEquals(result, ResponseEntity.ok().body(newAccountDto));
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void deleteAccountWithNullIdTest() throws AccountNotFoundException {
+    // Given
+
+    // When
+
+    // Then
+    accountService.deleteAccount(null);
+  }
+
+  @Test(expected = AccountNotFoundException.class)
+  public void deleteNonExistingAccountTest() throws AccountNotFoundException {
+    // Given
+    final Integer id = 1;
+
+    // When
+
+    // Then
+    accountService.deleteAccount(id);
+  }
+
+  @Test
+  public void deleteAccountTest() throws AccountNotFoundException {
+    // Given
+    final Integer id = 1;
+    Account account = new Account(id, "Account1", Money.of(50, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(id)).thenReturn(Optional.of(account));
+
+    // Then
+    accountService.deleteAccount(id);
+    Mockito.verify(accountRepository).delete(account);
+  }
 }
