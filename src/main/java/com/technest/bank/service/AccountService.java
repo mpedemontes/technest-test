@@ -14,4 +14,6 @@ public interface AccountService {
   ResponseEntity<AccountDto> addAccount(AccountPostDto accountPostDto);
 
   ResponseEntity<AccountDto> updateAccount(Integer id, AccountPostDto accountPostDto);
+
+  void deleteAccount(Integer id);
 }
