@@ -385,4 +385,188 @@ public class AccountServiceTest {
     accountService.deleteAccount(id);
     Mockito.verify(accountRepository).delete(account);
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void transferMoneyWithNullSenderIdTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer receiverId = 1;
+    final BigDecimal amount = BigDecimal.valueOf(50);
+
+    // When
+
+    // Then
+    accountService.transferMoney(null, receiverId, amount, null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void transferMoneyWithNullReceiverIdTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final BigDecimal amount = BigDecimal.valueOf(50);
+
+    // When
+
+    // Then
+    accountService.transferMoney(senderId, null, amount, null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void transferMoneyWithNullAmountTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+
+    // When
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, null, null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void transferMoneyWithNegativeAmountTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(-50);
+
+    // When
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, amount, null);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void transferMoneyWithSameSenderAndReceiverTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 1;
+    final BigDecimal amount = BigDecimal.valueOf(50);
+
+    // When
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, amount, null);
+  }
+
+  @Test(expected = AccountNotFoundException.class)
+  public void transferMoneyWithNonExistingSenderAccountTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(50);
+
+    // When
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, amount, null);
+  }
+
+  @Test(expected = AccountNotFoundException.class)
+  public void transferMoneyWithNonExistingReceiverAccountTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(50);
+    Account account1 = new Account(senderId, "Account1", Money.of(50, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(senderId)).thenReturn(Optional.of(account1));
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, amount, null);
+  }
+
+  @Test(expected = UnknownCurrencyException.class)
+  public void transferMoneyWithInvalidCurrencyTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(50);
+    Account account1 = new Account(senderId, "Account1", Money.of(50, "EUR"), false);
+    Account account2 = new Account(receiverId, "Account2", Money.of(100, "USD"), false);
+    final String currency = "ABC";
+
+    // When
+    Mockito.when(accountRepository.findById(senderId)).thenReturn(Optional.of(account1));
+    Mockito.when(accountRepository.findById(receiverId)).thenReturn(Optional.of(account2));
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, amount, currency);
+  }
+
+  @Test(expected = NegativeBalanceException.class)
+  public void transferHigherAmountThanOwnedWithNonTreasuryAccountTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(60);
+    Account account1 = new Account(senderId, "Account1", Money.of(50, "EUR"), false);
+    Account account2 = new Account(receiverId, "Account2", Money.of(100, "USD"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(senderId)).thenReturn(Optional.of(account1));
+    Mockito.when(accountRepository.findById(receiverId)).thenReturn(Optional.of(account2));
+
+    // Then
+    accountService.transferMoney(senderId, receiverId, amount, null);
+  }
+
+  @Test
+  public void transferHigherAmountThanOwnedWithTreasuryAccountTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(60);
+    Account account1 = new Account(senderId, "Account1", Money.of(50, "EUR"), true);
+    Account account2 = new Account(receiverId, "Account2", Money.of(100, "USD"), false);
+    Account account1NewBalance = new Account(senderId, "Account1", Money.of(-10, "EUR"), true);
+    AccountDto account1Dto = new AccountDto(senderId, "Account1", Monetary.getCurrency("EUR"),
+        Money.of(-10, "EUR"), true);
+
+    // When
+    Mockito.when(accountRepository.findById(senderId)).thenReturn(Optional.of(account1));
+    Mockito.when(accountRepository.findById(receiverId)).thenReturn(Optional.of(account2));
+    Mockito.when(accountRepository.save(Mockito.any())).thenReturn(account1NewBalance);
+
+    // Then
+    ResponseEntity<AccountDto> result = accountService
+        .transferMoney(senderId, receiverId, amount, null);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(result, ResponseEntity.ok().body(account1Dto));
+  }
+
+  @Test
+  public void transferLowerAmountThanOwnedTest()
+      throws AccountNotFoundException, NegativeBalanceException {
+    // Given
+    final Integer senderId = 1;
+    final Integer receiverId = 2;
+    final BigDecimal amount = BigDecimal.valueOf(20);
+    Account account1 = new Account(senderId, "Account1", Money.of(50, "EUR"), false);
+    Account account2 = new Account(receiverId, "Account2", Money.of(100, "USD"), false);
+    Account account1NewBalance = new Account(senderId, "Account1", Money.of(30, "EUR"), false);
+    AccountDto account1Dto = new AccountDto(senderId, "Account1", Monetary.getCurrency("EUR"),
+        Money.of(30, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(senderId)).thenReturn(Optional.of(account1));
+    Mockito.when(accountRepository.findById(receiverId)).thenReturn(Optional.of(account2));
+    Mockito.when(accountRepository.save(Mockito.any())).thenReturn(account1NewBalance);
+
+    // Then
+    ResponseEntity<AccountDto> result = accountService
+        .transferMoney(senderId, receiverId, amount, null);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(result, ResponseEntity.ok().body(account1Dto));
+  }
 }
