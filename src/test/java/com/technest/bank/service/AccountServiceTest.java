@@ -569,4 +569,70 @@ public class AccountServiceTest {
     Assert.assertNotNull(result);
     Assert.assertEquals(result, ResponseEntity.ok().body(account1Dto));
   }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountCurrencyWithNullIdTest() throws AccountNotFoundException {
+    // Given
+    final String currency = "EUR";
+
+    // When
+
+    // Then
+    accountService.updateAccountCurrency(null, currency);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void updateAccountCurrencyWithNullCurrencyTest() throws AccountNotFoundException {
+    // Given
+    final Integer id = 1;
+
+    // When
+
+    // Then
+    accountService.updateAccountCurrency(id, null);
+  }
+
+  @Test(expected = AccountNotFoundException.class)
+  public void updateNonExistingAccountCurrencyTest() throws AccountNotFoundException {
+    // Given
+    final Integer id = 1;
+    final String currency = "EUR";
+
+    // When
+
+    // Then
+    accountService.updateAccountCurrency(id, currency);
+  }
+
+  @Test(expected = UnknownCurrencyException.class)
+  public void updateAccountCurrencyWithInvalidCurrencyTest() throws AccountNotFoundException {
+    // Given
+    final Integer id = 1;
+    final String currency = "ABC";
+
+    // When
+
+    // Then
+    accountService.updateAccountCurrency(id, currency);
+  }
+
+  @Test
+  public void updateAccountCurrencyWithValidDataTest() throws AccountNotFoundException {
+    // Given
+    final Integer id = 1;
+    final String newCurrency = "USD";
+    Account accountOldCurrency = new Account(id, "Account", Money.of(100, "EUR"), false);
+    Account accountNewCurrency = new Account(id, "Account", Money.of(118.47, "USD"), false);
+    AccountDto accountDto = new AccountDto(id, "Account", Monetary.getCurrency("USD"),
+        Money.of(118.47, "USD"), false);
+
+    // When
+    Mockito.when(accountRepository.findById(id)).thenReturn(Optional.of(accountOldCurrency));
+    Mockito.when(accountRepository.save(Mockito.any())).thenReturn(accountNewCurrency);
+
+    // Then
+    ResponseEntity<AccountDto> result = accountService.updateAccountCurrency(id, newCurrency);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(result, ResponseEntity.ok().body(accountDto));
+  }
 }
