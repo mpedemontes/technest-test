@@ -12,6 +12,11 @@ import com.technest.bank.service.Mapper;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
+import javax.money.CurrencyUnit;
+import javax.money.Monetary;
+import javax.money.convert.CurrencyConversion;
+import javax.money.convert.MonetaryConversions;
+import org.javamoney.moneta.Money;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -115,6 +120,64 @@ public class AccountServiceImpl implements AccountService {
     Account account = accountRepository.findById(id).orElseThrow(
         () -> new AccountNotFoundException(String.format("Account with id %d not found", id)));
     accountRepository.delete(account);
+  }
+
+  @Override
+  public ResponseEntity<AccountDto> transferMoney(Integer senderId, Integer receiverId,
+      BigDecimal amount, String currency)
+      throws AccountNotFoundException, NegativeBalanceException {
+    if (senderId == null) {
+      throw new IllegalArgumentException("Id can not be null");
+    }
+    if (receiverId == null) {
+      throw new IllegalArgumentException("Id can not be null");
+    }
+    if (amount == null) {
+      throw new IllegalArgumentException("Amount can not be null");
+    }
+    if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+      throw new IllegalArgumentException("Amount to transfer must be greater than 0");
+    }
+
+    if (senderId.equals(receiverId)) {
+      throw new IllegalArgumentException("Sender and receiver must be different accounts");
+    }
+
+    Account sender = accountRepository.findById(senderId).orElseThrow(
+        () -> new AccountNotFoundException(
+            String.format("Account with id %d not found", senderId)));
+    Account receiver = accountRepository.findById(receiverId).orElseThrow(
+        () -> new AccountNotFoundException(
+            String.format("Account with id %d not found", senderId)));
+
+    CurrencyUnit transferCurrency =
+        currency == null ? sender.getBalance().getCurrency() : Monetary.getCurrency(currency);
+    CurrencyConversion transferConversion = MonetaryConversions.getConversion(transferCurrency);
+    CurrencyConversion senderConversion = MonetaryConversions
+        .getConversion(sender.getBalance().getCurrency());
+    CurrencyConversion receiverConversion = MonetaryConversions
+        .getConversion(receiver.getBalance().getCurrency());
+    Money transfer = Money.of(amount, transferCurrency);
+
+    // Check if sender has enough funds to transfer (if not treasury)
+    if (sender.getBalance().with(transferConversion).subtract(transfer).isNegative()
+        && Boolean.FALSE.equals(sender.getTreasury())) {
+      throw new NegativeBalanceException(String.format(
+          "Account with id %d does not have enough funds. Only treasury accounts can have a negative balance",
+          senderId));
+    }
+
+    // Subtract transfer from sender account and restore its currency
+    sender.setBalance(
+        sender.getBalance().with(transferConversion).subtract(transfer).with(senderConversion));
+
+    // Add transfer to receiver account and restore its currency
+    receiver.setBalance(
+        receiver.getBalance().with(transferConversion).add(transfer).with(receiverConversion));
+
+    // Save both accounts and return sender account
+    accountRepository.save(receiver);
+    return ResponseEntity.ok().body(mapper.mapToDto(accountRepository.save(sender)));
   }
 
 }

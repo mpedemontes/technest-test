@@ -5,6 +5,7 @@ import com.technest.bank.dto.AccountPostDto;
 import com.technest.bank.exception.AccountNotFoundException;
 import com.technest.bank.exception.NegativeBalanceException;
 import com.technest.bank.exception.TreasuryModifiedException;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 
@@ -21,4 +22,7 @@ public interface AccountService {
       throws AccountNotFoundException, TreasuryModifiedException, NegativeBalanceException;
 
   void deleteAccount(Integer id) throws AccountNotFoundException;
+
+  ResponseEntity<AccountDto> transferMoney(Integer senderId, Integer receiverId, BigDecimal amount,
+      String currency) throws AccountNotFoundException, NegativeBalanceException;
 }
