@@ -25,4 +25,7 @@ public interface AccountService {
 
   ResponseEntity<AccountDto> transferMoney(Integer senderId, Integer receiverId, BigDecimal amount,
       String currency) throws AccountNotFoundException, NegativeBalanceException;
+
+  ResponseEntity<AccountDto> updateAccountCurrency(Integer id, String currency)
+      throws AccountNotFoundException;
 }

@@ -66,6 +66,13 @@ public class AccountController {
     return accountService.updateAccount(id, accountPostDto);
   }
 
+  @PutMapping("/{id}/currency/{currency}")
+  @ResponseStatus(HttpStatus.OK)
+  public ResponseEntity<AccountDto> updateAccountCurrency(@PathVariable("id") Integer id,
+      @PathVariable("currency") String currency) throws AccountNotFoundException {
+    return accountService.updateAccountCurrency(id, currency);
+  }
+
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
   public void deleteAccount(@PathVariable("id") Integer id) throws AccountNotFoundException {

@@ -180,4 +180,27 @@ public class AccountServiceImpl implements AccountService {
     return ResponseEntity.ok().body(mapper.mapToDto(accountRepository.save(sender)));
   }
 
+  @Override
+  public ResponseEntity<AccountDto> updateAccountCurrency(Integer id, String currency)
+      throws AccountNotFoundException {
+    if (id == null) {
+      throw new IllegalArgumentException("Id can not be null");
+    }
+    if (currency == null) {
+      throw new IllegalArgumentException("Currency can not be null");
+    }
+
+    CurrencyUnit newCurrency = Monetary.getCurrency(currency);
+
+    Account account = accountRepository.findById(id).orElseThrow(
+        () -> new AccountNotFoundException(String.format("Account with id %d not found", id)));
+
+    Money oldBalance = account.getBalance();
+    CurrencyConversion conversion = MonetaryConversions.getConversion(newCurrency);
+    Money newBalance = oldBalance.with(conversion);
+
+    account.setBalance(newBalance);
+    return ResponseEntity.ok().body(mapper.mapToDto(accountRepository.save(account)));
+  }
+
 }
