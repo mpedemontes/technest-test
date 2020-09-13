@@ -12,4 +12,6 @@ public interface AccountService {
   ResponseEntity<AccountDto> findById(Integer id);
 
   ResponseEntity<AccountDto> addAccount(AccountPostDto accountPostDto);
+
+  ResponseEntity<AccountDto> updateAccount(Integer id, AccountPostDto accountPostDto);
 }
