@@ -2,10 +2,13 @@ package com.technest.bank.service;
 
 import com.technest.bank.dao.AccountRepository;
 import com.technest.bank.dto.AccountDto;
+import com.technest.bank.dto.AccountPostDto;
 import com.technest.bank.exception.AccountNotFoundException;
+import com.technest.bank.exception.NegativeBalanceException;
 import com.technest.bank.model.Account;
 import com.technest.bank.service.impl.AccountServiceImpl;
 import com.technest.bank.service.impl.MapperImpl;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import javax.money.Monetary;
@@ -93,6 +96,100 @@ public class AccountServiceTest {
 
     // Then
     ResponseEntity<AccountDto> result = accountService.findById(id);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(result, ResponseEntity.ok().body(accountDto));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void addAccountWithNullNameTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto(null, "EUR", BigDecimal.valueOf(50), false);
+
+    // When
+
+    // Then
+    accountService.addAccount(accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void addAccountWithNullCurrencyTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto("Account1", null, BigDecimal.valueOf(50),
+        false);
+
+    // When
+
+    // Then
+    accountService.addAccount(accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void addAccountWithNullBalanceTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", null, false);
+
+    // When
+
+    // Then
+    accountService.addAccount(accountPostDto);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void addAccountWithNullTreasuryTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(50),
+        null);
+
+    // When
+
+    // Then
+    accountService.addAccount(accountPostDto);
+  }
+
+  @Test(expected = NegativeBalanceException.class)
+  public void addNonTreasuryAccountWithNullBalanceTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(-10),
+        false);
+
+    // When
+
+    // Then
+    accountService.addAccount(accountPostDto);
+  }
+
+  @Test
+  public void addTreasuryAccountWithNegativeBalanceTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto("Account", "EUR", BigDecimal.valueOf(-10),
+        true);
+    Account account = new Account(1, "Account", Money.of(-10, "EUR"), true);
+    AccountDto accountDto = new AccountDto(1, "Account", Monetary.getCurrency("EUR"),
+        Money.of(-10, "EUR"), true);
+
+    // When
+    Mockito.when(accountRepository.save(Mockito.any())).thenReturn(account);
+
+    // Then
+    ResponseEntity<AccountDto> result = accountService.addAccount(accountPostDto);
+    Assert.assertNotNull(result);
+    Assert.assertEquals(result, ResponseEntity.ok().body(accountDto));
+  }
+
+  @Test
+  public void addNonTreasuryAccountWithNonNegativeBalanceTest() throws NegativeBalanceException {
+    // Given
+    AccountPostDto accountPostDto = new AccountPostDto("ACcount", "EUR", BigDecimal.valueOf(50),
+        false);
+    Account account = new Account(1, "Account", Money.of(50, "EUR"), false);
+    AccountDto accountDto = new AccountDto(1, "Account", Monetary.getCurrency("EUR"),
+        Money.of(50, "EUR"), false);
+
+    // When
+    Mockito.when(accountRepository.save(Mockito.any())).thenReturn(account);
+
+    // Then
+    ResponseEntity<AccountDto> result = accountService.addAccount(accountPostDto);
     Assert.assertNotNull(result);
     Assert.assertEquals(result, ResponseEntity.ok().body(accountDto));
   }
