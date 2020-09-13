@@ -44,7 +44,8 @@ public class AccountController {
 
   @PutMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
-  public ResponseEntity<AccountDto> updateAccount(@PathVariable("id") Integer id, @RequestBody AccountPostDto accountPostDto) {
+  public ResponseEntity<AccountDto> updateAccount(@PathVariable("id") Integer id,
+      @RequestBody AccountPostDto accountPostDto) {
     return accountService.updateAccount(id, accountPostDto);
   }
 
